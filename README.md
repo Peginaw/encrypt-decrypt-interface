@@ -4,7 +4,7 @@ No need to worry about destroying your original files, as this program will neve
 
 ### Quick-Start Guide:
 
-1. Ensure you have the following dependencies installed. These are just the versions used to create the tool. Other versions may work.<br>
+1. Ensure you have the following dependencies installed. (These are just the versions I used. Other versions may work.)<br>
 <ul>
   <li><b>Python 3.7 or higher</b></li>
   <ul>
@@ -28,8 +28,8 @@ No need to worry about destroying your original files, as this program will neve
 This tool can: 
 <ul>
   <li>Generate new encryption keys</li>
-  <li>Use a key to create an encrypted copy of a file, which will have the extension: <code>.encrypted</code></li>
-  <li>Decrypt a <code>.encrypted</code> file, using the key that was originally used to encrypt it</li>
+  <li>Use a key to <b>encrypt</b> a file, which will have the extension: <code>.encrypted</code></li>
+  <li>Use the same key to <b>decrypt</b> a <code>.encrypted</code> file</li>
 </ul>
 This tool uses the <a href="https://cryptography.io/en/latest/fernet/Fernet" target="_blank" rel="noopener noreferrer">Fernet</a> module, built into the Python 'cryptography' library, to perform encryption and decryption of single files.<br>
 It operates with symmetrical encryption, meaning that it uses just a <b>single key for both encryting and decrypting files</b>.<br>
@@ -54,7 +54,7 @@ Click "Select File". This will open up a dialog box where you can select a file.
 
 ### Encrypting a File
 
-Click "Encrypt it". Another dialog box will open, asking you to select the key you wish to use for encryption.<br>
+Click "Encrypt it" and select the key you wish to use for encryption.<br>
 An encrypted copy of the file will be saved in the same folder as the original file.
 <b>The title of the encrypted file will include the name of the key used to encrypt it</b>
 
@@ -64,7 +64,9 @@ An encrypted copy of the file will be saved in the same folder as the original f
 
 CLick "Select File" and choose your encrypted file.<br>
 Click "Decrypt it" and select the key you originally used for encrypting this particular file (Hint: It's in the encrypted file's name)<br>
-Finally, another dialog box will pop up for you to name and save the newly decrypted file. 
+Finally, another dialog box will pop up for you to save your newly decrypted file.
+
+> For safety, this program will not allow overwriting of existing files, so you must use a new name.
 
 <hr>
 
