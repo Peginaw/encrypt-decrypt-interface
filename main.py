@@ -1,87 +1,148 @@
-from tkinter import Tk
-from tkinter import Button
-from tkinter import Label
+from email.mime import image
+from tkinter import Tk, Button, Label, Frame
 from tkinter.filedialog import askopenfilename
 from tkinter.filedialog import asksaveasfilename
+from PIL import Image, ImageTk
 from encdec import fernetFile
 from encdec import createNewKey
+import cv2
 import os
 
-
-root = Tk()
+IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.raw')
+VIDEO_EXTENSIONS = ('.mp4', '.avi', '.mov', '.wmv', '.mkv', '.webm')
+PREVIEW_SIZE = (350, 350)
 
 class FilePathBuffer():
     def __init__(self, path):
         self.path = path
 
 def selectFile():
+
     fpBuffer.path = askopenfilename()
+    if fpBuffer.path == '': return
+
     if fpBuffer.path.endswith(".encrypted"):
         decryptBtn["state"] = "normal"
         selFileBtn["text"] = "Select Different File"
-        infoLabel["text"] = "You've selected an encrypted file."
+        confirmationLabel["text"] = "You've selected an encrypted file."
     else:
         encryptBtn["state"] = "normal"
         selFileBtn["text"] = "Select Different File"
-        infoLabel["text"] = "You've selected a normal file."
+        confirmationLabel["text"] = "You've selected a normal file. (not encrypted)"
 
+    statusLabel["text"] = ""
     fileLabel["text"] = f"File Selected: '{os.path.split(fpBuffer.path)[1]}'"
-    newKeyLabel["text"] = ''
     newKeyBtn["state"] = "disabled"
 
+    # Depending on the file extension, display a preview thumbnail
+
+    if fpBuffer.path.endswith(IMAGE_EXTENSIONS):
+        # display the image file itself as the thumbnail
+        thumb = Image.open(fpBuffer.path)
+
+    elif fpBuffer.path.endswith(VIDEO_EXTENSIONS):
+        # capture first frame of video to display as thumbnail
+        videoCapture = cv2.VideoCapture(fpBuffer.path)
+        ret, imageArray = videoCapture.read()
+        thumb = Image.fromarray(imageArray)
+    else:
+        thumb = Image.open("./imgs/unknownfile.png") 
+        
+    displayThumbnail(thumb)
+
 def encrypt():
-    # Get key from user
-    key = askopenfilename(title="Select your Key for encryption", initialdir="./")
-    selFileBtn["state"] = "normal"
-    # Create Fernet instance encrypt the file, export it
-    fern = fernetFile(keyPath=key, filepath=fpBuffer.path)
+    key = askopenfilename(title="Select your Key for Encryption", initialdir="./")
+    if key == '': return
+    fern = fernetFile(keyPath=key, filepath=fpBuffer.path) # This object holds file and key paths
     cipher = fern.encryptFile()
     fern.exportEncryptedFile(cipher)
-    fpBuffer.path = ""
     resetLabels()
+    confirmationLabel['text'] = f'Successfully encrypted "{os.path.split(fpBuffer.path)[1]}"'
+    fpBuffer.path = ""
 
 def decrypt():
-    # Get key from user
-    key = askopenfilename(title="Select your Key for decryption", initialdir="./")
-    selFileBtn["state"] = "normal"
-    # Create Fernet instance, decrypt the file, export it
-    fern = fernetFile(keyPath=key, filepath=fpBuffer.path)
+    # Decrypt it into memory
+    keypath = askopenfilename(title="Select your Key for decryption", initialdir="./")
+    if keypath == '': return
+    fern = fernetFile(keyPath=keypath, filepath=fpBuffer.path) # This object holds file and key paths
     decryptedFile = fern.decryptFile()
-    saveName = asksaveasfilename(confirmoverwrite=True ,initialdir="./", filetypes=(("jpg file", "*.jpg"),("png file", "*.png"),("mp4 file", "*.mp4"),("All Files", "*.*") ), defaultextension=".jpg", initialfile=fern.filepath)
-    fern.exportDecryptedFile(decryptedFile, saveName)
+    # Save the file
+    fern.exportDecryptedFile(decryptedFile)
+    confirmationLabel['text'] = f'Successfully decrypted: "{os.path.split(fpBuffer.path)[1]}"'
     resetLabels()
 
 def newKey():
     keyname = createNewKey()
-    newKeyLabel["text"] = f'New key generated: {keyname}'
+    confirmationLabel["text"] = f'New key generated: {keyname}'
 
 def resetLabels():
-    infoLabel["text"] = "Select a file to encrypt or decrypt"
+    statusLabel["text"] = "Ready to select a file or create a new key"
     selFileBtn["text"] = "Select File"
+    fileLabel["text"] = "No file selected"
+    selFileBtn["state"] = "normal"
     newKeyBtn["state"] = "normal"
     decryptBtn["state"] = "disabled"
     encryptBtn["state"] = "disabled"
+    displayThumbnail(Image.open("./imgs/unknownfile.png"))
 
-
+def displayThumbnail(thumb):
+    thumb.thumbnail(PREVIEW_SIZE, Image.ANTIALIAS)  # resize image to fit
+    TkThumb = ImageTk.PhotoImage(thumb)
+    imageLabel["image"] = TkThumb
+    imageLabel.TkThumbnail = TkThumb
 
 if __name__ == "__main__":
     fpBuffer = FilePathBuffer(path="")
-    infoLabel = Label(root, text="Select a file to encrypt or decrypt")
-    infoLabel.pack()
-    selFileBtn = Button(root, text="Select File", command=selectFile,padx=50, pady=15)
-    selFileBtn.pack()
-    encryptBtn = Button(root, text="Encrypt it", command=encrypt, padx=50, pady=15, state="disabled")
-    encryptBtn.pack()
-    decryptBtn = Button(root, text="Decrypt it", command=decrypt, padx=50, pady=15, state="disabled")
-    decryptBtn.pack()
-    fileLabel = Label(root, text=f"No file selected")
-    fileLabel.pack()
-    newKeyBtn = Button(root, text="Generate New Key", command=newKey, padx=50)
-    newKeyBtn.pack()
-    newKeyLabel = Label(root, text=f"")
-    newKeyLabel.pack()
-    authorLabel = Label(root, text=f"Simon Pequegnat 2022")
-    authorLabel.pack()
+    root = Tk()
+    root.title("Encrypt/Decrypt Interface")
+
+    # Frames
+    bodyFrame = Frame(root, width="700px", height="500px")
+    bodyFrame.grid(row=0, column=0, padx=10, pady=2)
+
+    leftFrame = Frame(bodyFrame, width="300px", height="500px")
+    leftFrame.grid(row=0, column=0, padx=10, pady=2)
+    
+    rightFrame = Frame(bodyFrame, width="300px", height="500px", highlightbackground="black", highlightthickness=1)
+    rightFrame.grid(row=0, column=1, padx=10, pady=2)
+    
+    footerFrame = Frame(root, height="100px")
+    footerFrame.grid(row=1, padx=10, pady=2)
+
+    # Left Frame Contents    
+    statusLabel = Label(leftFrame, text="Ready to select a file or create a new key")
+    statusLabel.grid(row=0, padx=10, pady=2)
+    selFileBtn = Button(leftFrame, text="Select File", command=selectFile,padx=50, pady=15)
+    selFileBtn.grid(row=1, padx=10, pady=2)
+    encryptBtn = Button(leftFrame, text="Encrypt it", command=encrypt, padx=50, pady=15, state="disabled")
+    encryptBtn.grid(row=2, padx=10, pady=2)
+    decryptBtn = Button(leftFrame, text="Decrypt it", command=decrypt, padx=50, pady=15, state="disabled")
+    decryptBtn.grid(row=3, padx=10, pady=2)
+    newKeyBtn = Button(leftFrame, text="Generate New Key", command=newKey, padx=50)
+    newKeyBtn.grid(row=4, padx=10, pady=2)
+    confirmationLabel = Label(leftFrame, text=f"")
+    confirmationLabel.grid(row=5, padx=10, pady=2)
+
+    # Right Frame Contents
+    previewLabel = Label(rightFrame, text="Preview:")
+    previewLabel.grid(row=0, padx=10, pady=2)
+
+    imageLabel = Label(rightFrame)
+    imageLabel.grid(row=1, padx=10, pady=2)
+    displayThumbnail(Image.open("./imgs/unknownfile.png"))
+
+    fileLabel = Label(rightFrame, text="No file selected")
+    fileLabel.grid(row=2, padx=10, pady=2)
+
+    # Footer Frame Contents
+    authorLabel = Label(footerFrame, text="Peginaw 2022")
+    authorLabel.grid(row=0, padx=10, pady=2)
 
     root.mainloop()
+
+    ### DEBUGGING FRAME COLOURS
+    #bodyFrame['bg'] = 'red'
+    #leftFrame['bg'] = 'red'
+    #rightFrame['bg'] = 'green'
+    #footerFrame['bg'] = 'yellow'
     

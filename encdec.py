@@ -1,10 +1,7 @@
-
 from cryptography.fernet import Fernet
-import PIL.Image as Image
+from PIL import Image, ImageTk
 import io
 import os
-
-print("For this code, the __name__ is: " + __name__)
 
 def createNewKey() -> str:
     # Create a new key
@@ -23,13 +20,14 @@ class fernetFile():
     def __init__(self, keyPath: str, filepath: str) -> None:
         self.keyPath = keyPath
         self.filepath = filepath
-        self.f = Fernet(Fernet.generate_key()) # just so self.f be initialized
+        with open(keyPath, 'rb') as keyFile:
+            keyString = keyFile.read()
+            self.f = Fernet(keyString)
 
     def createFernetObject(self) -> Fernet:
         # Create a Fernet object, used to encrypt AND decrypt using this specific key
         with open(f"{self.keyPath}", 'rb') as bufferedKey:
             key = bufferedKey.read()
-            print("Key: " + key)
             self.f = Fernet(key)
 
     def encryptFile(self) -> bytes:
@@ -45,23 +43,31 @@ class fernetFile():
 
         with open(filename, 'wb') as encryptedFile:
             encryptedFile.write(cipher)
-            print("Encryption complete")
-            print(f"Wrote file: {filename}")
 
+        print("Encryption complete")
+        print(f"Wrote file: {filename}")
 
     def decryptFile(self) -> bytes:
         # Decrypt the cipher
-        decryptedFile = self.f.decrypt(self.filepath)
-        return decryptedFile
+        with open(self.filepath, 'rb') as cipher:
+            cipherBytes = cipher.read()
+            decryptedFile = self.f.decrypt(cipherBytes)
+            print("Decryption complete")
+            return decryptedFile
 
-    def exportDecryptedFile(decryptedFile, filename) -> None:
-        # Export the decrypted file
+    def exportDecryptedFile(self, decryptedFile) -> None:
+        originalName = f'{self.filepath.rpartition("_KEY=")[0]}'
+        name, dot, ext = originalName.rpartition(".")
+    
+        newName = f'{name}-decrypted{dot}{ext}'
 
-        if os.path.isfile(filename):  # remove existing file
-            os.remove(filename)
+
+        if os.path.isfile(newName):  # check for a collision
+            raise FileExistsError(f'Cannot overwrite existing "{newName}" file')
             
-        with open(f"{filename}", 'wb') as video: # write new file
-            video.write(decryptedFile)
+        with open(f"{newName}", 'wb') as file: # write new file
+            file.write(decryptedFile)
+            print(f"Wrote file: {newName}")
 
     def viewImage(decryptedFile):
         # Use Pillow lib to open and view the image without saving it
